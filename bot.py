@@ -1,7 +1,6 @@
 import logging
 import sqlite3
-import random
-from datetime import datetime, time
+from datetime import datetime
 import pytz
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
@@ -18,7 +17,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# 2. Khởi tạo Cơ sở dữ liệu SQLite (Bộ nhớ thông minh toàn diện cho từng khách hàng)
+# 2. Khởi tạo Cơ sở dữ liệu SQLite (Bộ nhớ thông minh)
 def init_db():
     conn = sqlite3.connect("thodia_ultimate_memory.db")
     cursor = conn.cursor()
@@ -75,7 +74,7 @@ def update_user_profile(telegram_id, shopping_style=None, favorite_category=None
     conn.commit()
     conn.close()
 
-# 3. Lệnh /start khởi đầu thân thiện
+# 3. Lệnh /start chào mừng thân thiện
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     get_or_create_user(user.id, user.first_name)
@@ -86,19 +85,16 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     await update.message.reply_text(welcome_msg, parse_mode="Markdown")
 
-# 4. Bộ não AI & Xử lý ngôn ngữ tự nhiên, phân tích hành vi & nghề nghiệp
+# 4. Xử lý thông điệp và phân tích hành vi
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     user_data = get_or_create_user(user.id, user.first_name)
     text = update.message.text.lower()
     
-    # Ghi nhận giờ tương tác hiện tại của khách để học hỏi nhịp sinh học (Dynamic Timing)
     current_hour = datetime.now().hour
-    # Loại trừ khung giờ ngủ (23h - 7h), ghi nhận thói quen rảnh rỗi của khách
     if 7 <= current_hour <= 22:
         update_user_profile(user.id, preferred_hour=current_hour)
 
-    # Suy luận thông minh: Phát hiện tiểu thương / kinh doanh F&B / ăn uống
     strategy_advice = ""
     if any(kw in text for kw in ["bánh", "nguyên liệu", "bột", "sốt", "quán", "sỉ", "đồ ăn", "pha chế", "học sinh"]):
         update_user_profile(user.id, job_type="fb_small_business", favorite_category="thực phẩm / F&B")
@@ -111,7 +107,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif any(kw in text for kw in ["máy", "điện tử", "cáp", "sạc", "tai nghe", "laptop"]):
         update_user_profile(user.id, favorite_category="công nghệ")
 
-    # Mô phỏng kết quả so sánh đa sàn (Ưu tiên giá sốc nhất lên đầu đúng gu)
     response_text = (
         f"🔍 **Thổ Địa đã phân tích và lọc riêng kết quả tối ưu cho sếp:**\n\n"
         f"1️⃣ **TikTok Shop (Rẻ nhất sau mã):**\n"
@@ -123,7 +118,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"{strategy_advice}"
     )
 
-    # Gắn nút bấm affiliate gọn gàng, tinh tế
     keyboard = [
         [InlineKeyboardButton("🛒 Mua ngay ở TikTok (Giá rẻ nhất)", url="https://s.shopee.vn/example")],
         [InlineKeyboardButton("🛡️ Mua ngay ở Shopee (Chính hãng)", url="https://s.shopee.vn/example")]
@@ -132,14 +126,12 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text(response_text, reply_markup=reply_markup, parse_mode="Markdown")
 
-# 5. Động cơ Nhịp sinh học linh hoạt (Dynamic Scheduler - Tự động nhắn tin chủ động đúng giờ khách rảnh)
+# 5. Động cơ Nhịp sinh học linh hoạt
 async def check_and_send_proactive_messages(context: ContextTypes.DEFAULT_TYPE):
-    """Hệ thống quét ngầm mỗi giờ, tự động gửi tin nhắn chủ động cho khách đúng vào khung giờ họ hay rảnh"""
     vn_tz = pytz.timezone("Asia/Ho_Chi_Minh")
     current_time = datetime.now(vn_tz)
     current_hour = current_time.hour
     
-    # Không bao giờ làm phiền khách trong khoảng 23h đêm đến 7h sáng hôm sau (Safe Zone)
     if current_hour < 7 or current_hour > 22:
         return
 
@@ -151,7 +143,6 @@ async def check_and_send_proactive_messages(context: ContextTypes.DEFAULT_TYPE):
 
     for user in users:
         tg_id, name, job_type, category, pref_hour = user
-        # Nếu giờ hiện tại trùng khớp với giờ khách hay hoạt động lịch sử
         if pref_hour == current_hour:
             try:
                 if job_type == "fb_small_business":
@@ -165,26 +156,23 @@ async def check_and_send_proactive_messages(context: ContextTypes.DEFAULT_TYPE):
                     )
                 
                 await context.bot.send_message(chat_id=tg_id, text=msg)
-                logger.info(f"Đã gửi tin nhắn chủ động theo nhịp sinh học cho user {tg_id} lúc {current_hour}h")
             except Exception as e:
-                logger.error(f"Lỗi gửi tin nhắn chủ động cho {tg_id}: {e}")
+                logger.error(f"Lỗi gửi tin nhắn chủ động: {e}")
 
-# 6. Khởi chạy toàn bộ hệ thống Bot
+# 6. Khởi chạy bot
 def main():
     # THAY THẾ 'YOUR_BOT_TOKEN' BẰNG MÃ TOKEN THẬT DO @BotFather CẤP
-    TOKEN = "8957682513:AAFKG2e66EoRNma_T-vhSSMZIfxu9MSmRl4"
+    TOKEN = "7917789311:AAH..."  # <- Dán token thật của bạn vào đây
     
     application = ApplicationBuilder().token(TOKEN).build()
     
-    # Đăng ký các trình xử lý sự kiện
     application.add_handler(CommandHandler("start", start))
     application.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
     
-    # Cài đặt tiến trình ngầm kiểm tra nhịp sinh học mỗi 60 phút
     job_queue = application.job_queue
     job_queue.run_repeating(check_and_send_proactive_messages, interval=3600, first=10)
     
-    print("🤖 Bot 'Thổ Địa Giá Rẻ' phiên bản Ultimate (100% hoàn thiện) đã khởi động...")
+    print("🤖 Bot 'Thổ Địa Giá Rẻ' đã khởi động thành công và hoạt động trơn tru...")
     application.run_polling()
 
 if __name__ == "__main__":
