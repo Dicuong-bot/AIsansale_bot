@@ -159,7 +159,7 @@ async def check_and_send_proactive_messages(context: ContextTypes.DEFAULT_TYPE):
             except Exception as e:
                 logger.error(f"Lỗi gửi tin nhắn chủ động: {e}")
 
-# 6. Khởi chạy bot
+# 6. Khởi chạy bot bằng phương thức tối ưu chống lỗi phiên bản Python
 def main():
     # THAY THẾ 'YOUR_BOT_TOKEN' BẰNG MÃ TOKEN THẬT DO @BotFather CẤP
     TOKEN = "7917789311:AAH..."  # <- Dán token thật của bạn vào đây
@@ -169,11 +169,13 @@ def main():
     application.add_handler(CommandHandler("start", start))
     application.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
     
-    job_queue = application.job_queue
-    job_queue.run_repeating(check_and_send_proactive_messages, interval=3600, first=10)
+    if application.job_queue:
+        application.job_queue.run_repeating(check_and_send_proactive_messages, interval=3600, first=10)
     
     print("🤖 Bot 'Thổ Địa Giá Rẻ' đã khởi động thành công và hoạt động trơn tru...")
-    application.run_polling()
+    
+    # Sử dụng phương thức chạy thủ công (run_polling mặc định của bản rút gọn)
+    application.run_polling(drop_pending_updates=True)
 
 if __name__ == "__main__":
     main()
