@@ -11,13 +11,13 @@ from telegram.ext import (
     filters,
 )
 
-# 1. Cấu hình hệ thống log
+# Cấu hình hệ thống log
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
 )
 logger = logging.getLogger(__name__)
 
-# 2. Khởi tạo Cơ sở dữ liệu SQLite (Bộ nhớ thông minh)
+# Khởi tạo Cơ sở dữ liệu SQLite (Bộ nhớ thông minh)
 def init_db():
     conn = sqlite3.connect("thodia_ultimate_memory.db")
     cursor = conn.cursor()
@@ -74,7 +74,7 @@ def update_user_profile(telegram_id, shopping_style=None, favorite_category=None
     conn.commit()
     conn.close()
 
-# 3. Lệnh /start chào mừng thân thiện
+# Lệnh /start chào mừng thân thiện
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     get_or_create_user(user.id, user.first_name)
@@ -85,7 +85,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     await update.message.reply_text(welcome_msg, parse_mode="Markdown")
 
-# 4. Xử lý thông điệp và phân tích hành vi
+# Xử lý thông điệp và phân tích hành vi
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     user_data = get_or_create_user(user.id, user.first_name)
@@ -126,7 +126,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text(response_text, reply_markup=reply_markup, parse_mode="Markdown")
 
-# 5. Động cơ Nhịp sinh học linh hoạt
+# Động cơ Nhịp sinh học linh hoạt
 async def check_and_send_proactive_messages(context: ContextTypes.DEFAULT_TYPE):
     vn_tz = pytz.timezone("Asia/Ho_Chi_Minh")
     current_time = datetime.now(vn_tz)
@@ -159,10 +159,9 @@ async def check_and_send_proactive_messages(context: ContextTypes.DEFAULT_TYPE):
             except Exception as e:
                 logger.error(f"Lỗi gửi tin nhắn chủ động: {e}")
 
-# 6. Khởi chạy bot bằng phương thức tối ưu chống lỗi phiên bản Python
+# Khởi chạy bot bằng phương thức tối ưu chống lỗi phiên bản Python
 def main():
-    # THAY THẾ 'YOUR_BOT_TOKEN' BẰNG MÃ TOKEN THẬT DO @BotFather CẤP
-    TOKEN = "7917789311:AAH..."  # <- Dán token thật của bạn vào đây
+    TOKEN = "8957682513:AAFKG2e66EoRNma_T-vhSSMZIfxu9MSmRl4"
     
     application = ApplicationBuilder().token(TOKEN).build()
     
@@ -174,7 +173,6 @@ def main():
     
     print("🤖 Bot 'Thổ Địa Giá Rẻ' đã khởi động thành công và hoạt động trơn tru...")
     
-    # Sử dụng phương thức chạy thủ công (run_polling mặc định của bản rút gọn)
     application.run_polling(drop_pending_updates=True)
 
 if __name__ == "__main__":
