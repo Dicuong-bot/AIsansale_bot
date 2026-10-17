@@ -2,6 +2,9 @@ import logging
 import sqlite3
 from datetime import datetime
 import pytz
+import os
+import threading
+from http.server import BaseHTTPRequestHandler, HTTPServer
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     ApplicationBuilder,
@@ -11,13 +14,23 @@ from telegram.ext import (
     filters,
 )
 
-# Cấu hình hệ thống log
+class DummyHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header('Content-type','text/plain')
+        self.end_headers()
+        self.wfile.write(b"Bot Tho Dia Gia Re is running perfectly!")
+
+def run_dummy_server():
+    port = int(os.environ.get("PORT", 10000))
+    server = HTTPServer(('0.0.0.0', port), DummyHandler)
+    server.serve_forever()
+
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
 )
 logger = logging.getLogger(__name__)
 
-# Khởi tạo Cơ sở dữ liệu SQLite (Bộ nhớ thông minh)
 def init_db():
     conn = sqlite3.connect("thodia_ultimate_memory.db")
     cursor = conn.cursor()
@@ -74,18 +87,16 @@ def update_user_profile(telegram_id, shopping_style=None, favorite_category=None
     conn.commit()
     conn.close()
 
-# Lệnh /start chào mừng thân thiện
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     get_or_create_user(user.id, user.first_name)
     welcome_msg = (
         f"👋 Chào sếp **{user.first_name}**! Em là **Thổ Địa Giá Rẻ** – trợ lý săn deal và chiến thần affiliate của sếp.\n\n"
-        "💡 Sếp cứ miêu tả tự nhiên món đồ hoặc nguyên liệu cần tìm (Ví dụ: *máy xay hạt, nguyên liệu làm bánh sỉ, đồ gia dụng...*). "
+        "💡 Sếp cứ miêu tả tự nhiên món đồ hoặc nguyên liệu cần tìm. "
         "Em sẽ tự động so giá rẻ nhất đa sàn, lọc mã giảm giá hời và tư vấn chiến lược kinh doanh nếu sếp cần luôn nha!"
     )
     await update.message.reply_text(welcome_msg, parse_mode="Markdown")
 
-# Xử lý thông điệp và phân tích hành vi
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     user_data = get_or_create_user(user.id, user.first_name)
@@ -102,19 +113,16 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "\n\n💡 *Góc Thổ Địa Tư Vấn Chiến Lược Kinh Doanh:*\n"
             "Em thấy sếp đang tìm nguyên liệu phục vụ kinh doanh. Mấy món này mua sỉ trên Shopee/TikTok Shop vừa được trợ giá sâu, "
             "không cần ôm hàng tồn kho nhiều mà vẫn có giá cực tốt. "
-            "Sếp cứ tham khảo thử, nếu ở khu vực quán của sếp món này chưa tối ưu, cứ hú em để em lọc thêm ý tưởng món mới hot hit tuần này nhé!"
+            "Sếp cứ tham khảo thử nha!"
         )
-    elif any(kw in text for kw in ["máy", "điện tử", "cáp", "sạc", "tai nghe", "laptop"]):
-        update_user_profile(user.id, favorite_category="công nghệ")
 
     response_text = (
         f"🔍 **Thổ Địa đã phân tích và lọc riêng kết quả tối ưu cho sếp:**\n\n"
         f"1️⃣ **TikTok Shop (Rẻ nhất sau mã):**\n"
         f"• Giá gốc: 500k ➔ **Giá chốt đơn: 410k** (Đã gom mã giảm 90k)\n"
-        f"• ⚡ *Đánh giá:* Sàn đang trợ giá sâu nhất cho tệp săn rẻ hôm nay. (Số lượng giới hạn!)\n\n"
+        f"• ⚡ *Đánh giá:* Sàn đang trợ giá sâu nhất cho tệp săn rẻ hôm nay.\n\n"
         f"2️⃣ **Shopee Mall (An tâm / Chính hãng):**\n"
         f"• Giá gốc: 550k ➔ **Giá chốt đơn: 460k**\n"
-        f"• 🛡️ *Đánh giá:* Đổi trả 15 ngày, bảo hành hãng uy tín.\n"
         f"{strategy_advice}"
     )
 
@@ -126,7 +134,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text(response_text, reply_markup=reply_markup, parse_mode="Markdown")
 
-# Động cơ Nhịp sinh học linh hoạt
 async def check_and_send_proactive_messages(context: ContextTypes.DEFAULT_TYPE):
     vn_tz = pytz.timezone("Asia/Ho_Chi_Minh")
     current_time = datetime.now(vn_tz)
@@ -146,23 +153,17 @@ async def check_and_send_proactive_messages(context: ContextTypes.DEFAULT_TYPE):
         if pref_hour == current_hour:
             try:
                 if job_type == "fb_small_business":
-                    msg = (
-                        f"✨ Chào buổi {('sáng' if current_hour < 12 else 'trưa' if current_hour < 17 else 'tối')} sếp **{name}**! "
-                        "Hôm nay em thấy có lô nguyên liệu đồ ăn vặt/làm bánh đang có flash sale giảm sâu, sếp có cần em lọc mã giá sỉ để chuẩn bị menu mới cho học sinh tuần này không ạ?"
-                    )
+                    msg = f"✨ Chào sếp **{name}**! Hôm nay em thấy có lô nguyên liệu đang flash sale, sếp có cần em lọc mã giá sỉ không ạ?"
                 else:
-                    msg = (
-                        f"✨ Thảnh thơi ghé qua chút nha sếp **{name}**! Em thấy mấy món {category} sếp quan tâm đợt trước nay đang có khung giờ vàng giảm sốc, sếp có muốn em nghía qua hộ món nào không?"
-                    )
-                
+                    msg = f"✨ Thảnh thơi ghé qua chút nha sếp **{name}**! Mấy món {category} sếp quan tâm đang giảm sốc đó!"
                 await context.bot.send_message(chat_id=tg_id, text=msg)
             except Exception as e:
                 logger.error(f"Lỗi gửi tin nhắn chủ động: {e}")
 
-# Khởi chạy bot bằng phương thức tối ưu chống lỗi phiên bản Python
 def main():
+    threading.Thread(target=run_dummy_server, daemon=True).start()
+
     TOKEN = "8957682513:AAFKG2e66EoRNma_T-vhSSMZIfxu9MSmRl4"
-    
     application = ApplicationBuilder().token(TOKEN).build()
     
     application.add_handler(CommandHandler("start", start))
@@ -171,8 +172,7 @@ def main():
     if application.job_queue:
         application.job_queue.run_repeating(check_and_send_proactive_messages, interval=3600, first=10)
     
-    print("🤖 Bot 'Thổ Địa Giá Rẻ' đã khởi động thành công và hoạt động trơn tru...")
-    
+    print("🤖 Bot 'Thổ Địa Giá Rẻ' đã khởi động thành công...")
     application.run_polling(drop_pending_updates=True)
 
 if __name__ == "__main__":
